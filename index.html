@@ -1,691 +1,315 @@
 
-
 <!DOCTYPE html>
-
 <html lang="pt">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#172b3a">
-
 <title>Diário do Motorista</title>
-
 <style>
-
 *{box-sizing:border-box}
-
 body{margin:0;background:#f1f4f6;color:#202b33;font-family:Arial,sans-serif}
-
 header{background:#172b3a;color:white;padding:20px}
-
 header h1{margin:0;font-size:23px}
-
 header p{margin:6px 0 0;color:#cbd5dc;font-size:13px}
-
 nav{display:flex;overflow-x:auto;background:white;border-bottom:1px solid #ddd}
-
 nav button{border:0;background:white;padding:14px 12px;white-space:nowrap;color:#344}
-
 nav button.active{color:#087bba;border-bottom:3px solid #087bba;font-weight:bold}
-
 main{max-width:760px;margin:auto;padding:14px}
-
 section{display:none}
-
 section.active{display:block}
-
 .card{background:white;padding:16px;margin:12px 0;border-radius:12px;box-shadow:0 2px 7px #0000000c}
-
 h2{font-size:19px;margin:4px 0 14px}
-
-h3{font-size:16px;margin:12px 0}
-
+h3{font-size:16px}
 label{display:block;font-size:13px;font-weight:bold;margin:12px 0 5px}
-
 input,select,textarea{width:100%;padding:12px;border:1px solid #ccd4da;border-radius:8px;font-size:16px;background:white;color:#222}
-
-textarea{min-height:85px;resize:vertical}
-
+textarea{min-height:85px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-button.action{border:0;background:#087bba;color:white;padding:12px 15px;border-radius:8px;font-size:15px;margin-top:12px}
-
-button.secondary{background:#e7edf1;color:#24333d}
-
-button.danger{background:#b93838;color:white}
-
+.action{border:0;background:#087bba;color:white;padding:12px 15px;border-radius:8px;font-size:15px;margin-top:12px}
+.secondary{background:#e7edf1;color:#24333d}
+.danger{background:#b93838;color:white}
 .item{padding:12px 0;border-bottom:1px solid #e5e8eb;font-size:14px}
-
 .muted{color:#687782;font-size:13px}
-
 hr{border:0;border-top:1px solid #e5e8eb;margin:16px 0}
-
 @media(max-width:480px){.grid{grid-template-columns:1fr}}
-
 </style>
-
 </head>
-
 <body>
-
 <header>
-
 <h1>Diário do Motorista</h1>
-
 <p>Registo diário de serviço, camiões e reboques</p>
-
 </header>
-
 <nav>
-
 <button class="active" data-tab="day">Dia</button>
-
 <button data-tab="trailers">Reboques</button>
-
 <button data-tab="history">Histórico</button>
-
 <button data-tab="backup">Cópias</button>
-
 <button data-tab="settings">Definições</button>
-
 </nav>
-
 <main>
-
 <section id="day" class="active">
-
 <div class="card">
-
 <h2>Registo do dia</h2>
-
 <label>Data</label><input type="date" id="date">
-
 <label>Tipo de descanso</label>
-
 <select id="rest">
-
 <option value="">Escolher...</option>
-
 <option>9 horas</option><option>11 horas</option>
-
 <option>24 horas</option><option>45 horas</option>
-
 <option>Descanso reduzido</option><option>Outro</option>
-
 </select>
-
-<label>Outro descanso</label><input id="otherRest" placeholder="Indicar">
-
+<label>Outro descanso</label><input id="otherRest" placeholder="Indicar, se aplicável">
 <div class="grid">
-
 <div><label>Hora de início</label><input type="time" id="startTime"></div>
-
 <div><label>Local de início</label><input id="startPlace" placeholder="Local"></div>
-
 <div><label>Hora de fim</label><input type="time" id="endTime"></div>
-
 <div><label>Local de fim</label><input id="endPlace" placeholder="Local"></div>
-
 </div>
-
 <label>Notas do dia</label><textarea id="notes" placeholder="Observações..."></textarea>
-
 <button class="action" id="saveDay">Guardar dia</button>
-
 </div>
 
 <div class="card">
-
 <h2>Reboque no início do dia</h2>
-
-<p class="muted">Escolhe um reboque já registado, escreve uma matrícula nova ou começa sem reboque.</p>
-
-<label>Reboque</label><select id="initialTrailer"></select>
-
-<label>Ou matrícula nova</label><input id="newInitialTrailer" placeholder="Matrícula do reboque">
-
+<p class="muted">Escolhe um reboque conhecido, escreve uma matrícula nova ou começa sem reboque.</p>
+<label>Reboque conhecido</label><select id="initialTrailer"></select>
+<label>Ou matrícula nova</label><input id="newInitialTrailer" placeholder="Matrícula">
 <button class="action" id="saveInitialTrailer">Guardar reboque inicial</button>
-
-<p class="muted">A hora e o local de engate usam os dados de início do dia, se estiverem preenchidos.</p>
-
-<div id="initialStatus"></div>
-
+<p class="muted" id="initialStatus">O engate usa a data, hora e local de início do dia, se estiverem preenchidos.</p>
 </div>
 
 <div class="card">
-
 <h2>Mudanças de camião</h2>
-
-<label>Hora</label><input type="time" id="truckTime">
-
 <label>Matrícula do camião</label><input id="truckPlate" placeholder="Matrícula">
-
-<label>Local</label><input id="truckPlace" placeholder="Local">
-
+<div class="grid">
+<div><label>Hora</label><input type="time" id="truckTime"></div>
+<div><label>Local</label><input id="truckPlace" placeholder="Local"></div>
+</div>
 <label>Nota</label><input id="truckNote" placeholder="Opcional">
-
 <button class="action" id="addTruck">Registar mudança</button>
-
 <div id="truckList"></div>
-
 </div>
 
 <div class="card">
-
 <h2>Reboques atualmente engatados</h2>
-
-<div id="openTrailersDay"></div>
-
+<div id="openDayTrailers"></div>
 </div>
-
 </section>
 
 <section id="trailers">
-
 <div class="card">
-
 <h2>Engatar reboque</h2>
-
 <label>Matrícula</label><input id="hitchPlate" placeholder="Matrícula">
-
 <div class="grid">
-
 <div><label>Data</label><input type="date" id="hitchDate"></div>
-
 <div><label>Hora</label><input type="time" id="hitchTime"></div>
-
 </div>
-
 <label>Local</label><input id="hitchPlace" placeholder="Local do engate">
-
 <label>Nota</label><input id="hitchNote" placeholder="Opcional">
-
 <button class="action" id="hitchBtn">Registar engate</button>
-
 </div>
-
 <div class="card">
-
 <h2>Reboques engatados</h2><div id="activeTrailers"></div>
-
 </div>
-
 <div class="card">
-
 <h2>Desengatar reboque</h2>
-
 <label>Reboque</label><select id="unhitchSelect"></select>
-
 <div class="grid">
-
 <div><label>Data</label><input type="date" id="unhitchDate"></div>
-
 <div><label>Hora</label><input type="time" id="unhitchTime"></div>
-
 </div>
-
 <label>Local</label><input id="unhitchPlace" placeholder="Local do desengate">
-
 <button class="action" id="unhitchBtn">Registar desengate</button>
-
 </div>
-
+<div class="card">
+<h2>Histórico de reboques</h2><div id="trailerHistory"></div>
+</div>
 </section>
 
-
 <section id="history">
-
 <div class="card">
-
 <h2>Pesquisar histórico</h2>
-
 <label>Data</label><input type="date" id="searchDate">
-
 <label>Matrícula do camião</label><input id="searchTruck" placeholder="Matrícula">
-
 <label>Matrícula do reboque</label><input id="searchTrailer" placeholder="Matrícula">
-
 <button class="action" id="searchBtn">Pesquisar</button>
-
 <button class="action secondary" id="clearSearch">Limpar pesquisa</button>
-
 <div id="historyResults"></div>
-
 </div>
-
 </section>
 
 <section id="backup">
-
 <div class="card">
-
 <h2>Cópia de segurança</h2>
-
-<p>Exporta os teus registos para um ficheiro e guarda-o na aplicação Ficheiros ou no iCloud Drive.</p>
-
+<p>Exporta os registos e guarda o ficheiro na aplicação Ficheiros ou no iCloud Drive.</p>
 <button class="action" id="exportBtn">Exportar cópia</button>
-
 <hr>
-
 <h3>Importar cópia</h3>
-
 <p class="muted">Atenção: importar substitui os dados atuais. Exporta primeiro uma cópia dos dados que tens.</p>
-
 <input type="file" id="importFile" accept=".json,application/json">
-
 <button class="action danger" id="importBtn">Importar ficheiro</button>
-
 </div>
-
 </section>
 
 <section id="settings">
-
 <div class="card">
-
 <h2>Definições</h2>
-
 <label>Matrícula habitual do camião</label>
-
 <input id="defaultTruck" placeholder="Matrícula habitual">
-
 <button class="action" id="saveSettings">Guardar definições</button>
-
 <hr>
-
 <p class="muted">Os dados ficam guardados neste dispositivo e navegador. Faz cópias de segurança regularmente.</p>
-
 </div>
-
 </section>
-
 </main>
-
 <div id="toast" style="display:none;position:fixed;bottom:15px;left:12px;right:12px;background:#172b3a;color:white;padding:12px;border-radius:8px;text-align:center"></div>
 
 <script>
-
 const KEY='diarioMotorista_v1';
-
 let db={days:{},trailerEvents:[],settings:{defaultTruck:''}};
-
 const $=id=>document.getElementById(id);
-
-const today=()=>new Date().toLocaleDateString('en-CA');
-
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-
-function load(){
-
- try{
-
-  const x=JSON.parse(localStorage.getItem(KEY)||'{}');
-
-  db={days:x.days||{},trailerEvents:x.trailerEvents||[],settings:{defaultTruck:'',...(x.settings||{})}};
-
- }catch(e){}
-
-}
-
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(s){$('toast').textContent=s;$('toast').style.display='block';setTimeout(()=>$('toast').style.display='none',2500)}
 function persist(){localStorage.setItem(KEY,JSON.stringify(db))}
-
-function toast(s){
-
- $('toast').textContent=s;
-
- $('toast').style.display='block';
-
- setTimeout(()=>$('toast').style.display='none',2500);
-
+function load(){
+ try{
+  const x=JSON.parse(localStorage.getItem(KEY)||'{}');
+  db={days:x.days||{},trailerEvents:x.trailerEvents||[],settings:{defaultTruck:'',...(x.settings||{})}};
+ }catch(e){toast('Erro ao ler dados guardados.')}
 }
-
-function esc(s){
-
- return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
+function dayObj(date){
+ return db.days[date]||{date,rest:'',otherRest:'',startTime:'',startPlace:'',endTime:'',endPlace:'',notes:'',trucks:[],initialEventId:''};
 }
-
-function dayObj(d){
-
- return db.days[d]||{date:d,rest:'',otherRest:'',startTime:'',startPlace:'',endTime:'',endPlace:'',notes:'',trucks:[],initialEventId:''};
-
-}
-
 function openEvents(){return db.trailerEvents.filter(e=>!e.unhitchDate)}
-
-function knownPlates(){
-
- return [...new Set(db.trailerEvents.map(e=>e.plate).filter(Boolean))].sort();
-
-}
-
-function renderTrailerChoices(){
-
+function renderChoices(){
  const old=$('initialTrailer').value;
-
- $('initialTrailer').innerHTML='<option value="">Sem reboque</option>'+
-
- knownPlates().map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
-
- if([...$('initialTrailer').options].some(o=>o.value===old))$('initialTrailer').value=old;
-
+ const plates=[...new Set(db.trailerEvents.map(e=>e.plate).filter(Boolean))].sort();
+ $('initialTrailer').innerHTML='<option value="">Sem reboque</option>'+plates.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+ if(plates.includes(old))$('initialTrailer').value=old;
 }
-
 function renderTrucks(d){
-
  $('truckList').innerHTML=(d.trucks||[]).map((t,i)=>`
-
- <div class="item"><b>${esc(t.plate)}</b> — ${esc(t.time)}<br>
-
- ${esc(t.place)} ${esc(t.note)}
-
- <br><button class="action danger" onclick="removeTruck(${i})">Apagar</button></div>
-
- `).join('')||'<p class="muted">Sem mudanças de camião registadas.</p>';
-
+ <div class="item"><b>${esc(t.plate)}</b> — ${esc(t.time)}<br>${esc(t.place)} ${esc(t.note)}
+ <br><button class="action danger" onclick="removeTruck(${i})">Apagar</button></div>`).join('')||'<p class="muted">Sem mudanças registadas.</p>';
 }
-
 function removeTruck(i){
-
- const d=dayObj($('date').value);
-
- d.trucks.splice(i,1);
-
- db.days[d.date]=d;persist();renderTrucks(d);
-
+ const d=dayObj($('date').value);d.trucks.splice(i,1);db.days[d.date]=d;persist();renderTrucks(d);
 }
-
 function renderOpen(){
-
- const html=openEvents().map(e=>`
-
- <div class="item"><b>${esc(e.plate)}</b><br>
-
- Engatado: ${esc(e.hitchDate)} ${esc(e.hitchTime)}<br>
-
- Local: ${esc(e.hitchPlace)}</div>
-
- `).join('')||'<p class="muted">Não há reboques engatados.</p>';
-
- $('openTrailersDay').innerHTML=html;
-
- $('activeTrailers').innerHTML=html;
-
- $('unhitchSelect').innerHTML=openEvents().map(e=>
-
- `<option value="${e.id}">${esc(e.plate)} — ${esc(e.hitchDate)}</option>`
-
- ).join('');
-
- if(!openEvents().length)$('unhitchSelect').innerHTML='<option value="">Nenhum reboque engatado</option>';
-
- $('trailerHistory').innerHTML=db.trailerEvents.slice().reverse().map(e=>
-
- `<div class="item"><b>${esc(e.plate)}</b><br>
-
- Engate: ${esc(e.hitchDate)} ${esc(e.hitchTime)} — ${esc(e.hitchPlace)}<br>
-
- Desengate: ${esc(e.unhitchDate||'Ainda engatado')} ${esc(e.unhitchTime||'')} — ${esc(e.unhitchPlace||'')}</div>`
-
- ).join('')||'<p class="muted">Ainda sem registos.</p>';
-
+ const html=openEvents().map(e=>`<div class="item"><b>${esc(e.plate)}</b><br>Engatado: ${esc(e.hitchDate)} ${esc(e.hitchTime)}<br>Local: ${esc(e.hitchPlace)}</div>`).join('')||'<p class="muted">Não há reboques engatados.</p>';
+ $('openDayTrailers').innerHTML=html;$('activeTrailers').innerHTML=html;
+ $('unhitchSelect').innerHTML=openEvents().map(e=>`<option value="${e.id}">${esc(e.plate)} — ${esc(e.hitchDate)}</option>`).join('')||'<option value="">Nenhum reboque engatado</option>';
+ $('trailerHistory').innerHTML=db.trailerEvents.slice().reverse().map(e=>`<div class="item"><b>${esc(e.plate)}</b><br>Engate: ${esc(e.hitchDate)} ${esc(e.hitchTime)} — ${esc(e.hitchPlace)}<br>Desengate: ${esc(e.unhitchDate||'Ainda engatado')} ${esc(e.unhitchTime)} — ${esc(e.unhitchPlace)}</div>`).join('')||'<p class="muted">Sem registos.</p>';
 }
-
 function loadDay(){
-
  const d=dayObj($('date').value);
-
- $('rest').value=d.rest||'';
-
- $('otherRest').value=d.otherRest||'';
-
- $('startTime').value=d.startTime||'';
-
- $('startPlace').value=d.startPlace||'';
-
- $('endTime').value=d.endTime||'';
-
- $('endPlace').value=d.endPlace||'';
-
- $('notes').value=d.notes||'';
-
- $('initialTrailer').value='';
-
- $('newInitialTrailer').value='';
-
- $('initialStatus').textContent='';
-
- renderTrucks(d);
-
- renderOpen();
-
+ ['rest','otherRest','startTime','startPlace','endTime','endPlace','notes'].forEach(id=>$(id).value=d[id]||'');
+ $('initialTrailer').value='';$('newInitialTrailer').value='';
+ $('initialStatus').textContent=d.initialEventId?'Já existe um reboque inicial associado a este dia.':'Escolhe um reboque ou deixa sem reboque.';
+ renderTrucks(d);renderOpen();
 }
-
 function saveDay(){
-
- const date=$('date').value;
-
- if(!date){toast('Escolhe uma data.');return}
-
+ const date=$('date').value;if(!date){toast('Escolhe a data.');return}
  const d=dayObj(date);
-
- d.rest=$('rest').value;
-
- d.otherRest=$('otherRest').value;
-
- d.startTime=$('startTime').value;
-
- d.startPlace=$('startPlace').value;
-
- d.endTime=$('endTime').value;
-
- d.endPlace=$('endPlace').value;
-
- d.notes=$('notes').value;
-
- db.days[date]=d;
-
- persist();toast('Dia guardado.');
-
+ ['rest','otherRest','startTime','startPlace','endTime','endPlace','notes'].forEach(id=>d[id]=$(id).value);
+ db.days[date]=d;persist();toast('Dia guardado.');
 }
-
 function saveInitialTrailer(){
-
- const date=$('date').value;
-
- if(!date){toast('Escolhe primeiro a data do dia.');return}
-
+ const date=$('date').value;if(!date){toast('Escolhe a data.');return}
  const d=dayObj(date);
-
  const plate=$('newInitialTrailer').value.trim()||$('initialTrailer').value.trim();
-
- const previous=d.initialEventId?db.trailerEvents.find(e=>e.id===d.initialEventId):null;
-
- if(previous&&!previous.unhitchDate&&previous.initialFor===date){
-
-  if(!plate){
-
-   db.trailerEvents=db.trailerEvents.filter(e=>e.id!==previous.id);
-
-   d.initialEventId='';
-
-  }else{
-
-   previous.plate=plate;
-
-   previous.hitchTime=d.startTime||'';
-
-   previous.hitchPlace=d.startPlace||'';
-
-  }
-
+ let old=d.initialEventId?db.trailerEvents.find(e=>e.id===d.initialEventId):null;
+ if(old&&!old.unhitchDate&&old.initialFor===date){
+  if(!plate){db.trailerEvents=db.trailerEvents.filter(e=>e.id!==old.id);d.initialEventId=''}
+  else{old.plate=plate;old.hitchTime=$('startTime').value;old.hitchPlace=$('startPlace').value}
  }else if(plate){
-
-  const e={id:uid(),plate,hitchDate:date,hitchTime:d.startTime||'',hitchPlace:d.startPlace||'',hitchNote:'Engate inicial do dia',initialFor:date};
-
-  db.trailerEvents.push(e);
-
-  d.initialEventId=e.id;
-
+  const e={id:uid(),plate,hitchDate:date,hitchTime:$('startTime').value,hitchPlace:$('startPlace').value,initialFor:date,unhitchDate:''};
+  db.trailerEvents.push(e);d.initialEventId=e.id;
  }
-
- db.days[date]=d;
-
- persist();renderTrailerChoices();renderOpen();
-
- $('initialStatus').textContent=plate?'Reboque inicial guardado.':'Dia sem reboque inicial.';
-
- $('newInitialTrailer').value='';
-
+ db.days[date]=d;persist();renderChoices();renderOpen();
+ $('newInitialTrailer').value='';$('initialStatus').textContent=plate?'Reboque inicial guardado.':'Dia sem reboque inicial.';
  toast('Reboque inicial atualizado.');
-
 }
-
-</script>
-
 function addTruck(){
- const date=$('date').value;
- const plate=$('truckPlate').value.trim();
- if(!date||!plate){toast('Indica a data e a matrícula do camião.');return}
- const d=dayObj(date);
- d.trucks=d.trucks||[];
- d.trucks.push({plate,time:$('truckTime').value,place:$('truckPlace').value,note:$('truckNote').value});
- db.days[date]=d;
- persist();
- $('truckPlate').value='';
- $('truckTime').value='';
- $('truckPlace').value='';
- $('truckNote').value='';
- renderTrucks(d);
- toast('Mudança de camião registada.');
+ const plate=$('truckPlate').value.trim(),date=$('date').value;
+ if(!date||!plate){toast('Indica a data e a matrícula.');return}
+ const d=dayObj(date);d.trucks.push({plate,time:$('truckTime').value,place:$('truckPlace').value,note:$('truckNote').value});
+ db.days[date]=d;persist();
+ ['truckPlate','truckTime','truckPlace','truckNote'].forEach(id=>$(id).value='');
+ renderTrucks(d);toast('Mudança de camião registada.');
 }
 function hitch(){
- const plate=$('hitchPlate').value.trim();
- if(!plate){toast('Indica a matrícula do reboque.');return}
- const e={
- id:uid(),plate,
- hitchDate:$('hitchDate').value||today(),
- hitchTime:$('hitchTime').value,
- hitchPlace:$('hitchPlace').value,
- hitchNote:$('hitchNote').value,
- unhitchDate:'',unhitchTime:'',unhitchPlace:''
- };
- db.trailerEvents.push(e);
- persist();
- $('hitchPlate').value='';
- $('hitchTime').value='';
- $('hitchPlace').value='';
- $('hitchNote').value='';
- renderTrailerChoices();renderOpen();
+ const plate=$('hitchPlate').value.trim();if(!plate){toast('Indica a matrícula.');return}
+ db.trailerEvents.push({id:uid(),plate,hitchDate:$('hitchDate').value||today(),hitchTime:$('hitchTime').value,hitchPlace:$('hitchPlace').value,hitchNote:$('hitchNote').value,unhitchDate:'',unhitchTime:'',unhitchPlace:''});
+ persist();renderChoices();renderOpen();
+ ['hitchPlate','hitchTime','hitchPlace','hitchNote'].forEach(id=>$(id).value='');
  toast('Engate registado.');
 }
 function unhitch(){
- const id=$('unhitchSelect').value;
- const e=db.trailerEvents.find(x=>x.id===id);
+ const e=db.trailerEvents.find(x=>x.id===$('unhitchSelect').value);
  if(!e){toast('Escolhe um reboque.');return}
- e.unhitchDate=$('unhitchDate').value||today();
- e.unhitchTime=$('unhitchTime').value;
- e.unhitchPlace=$('unhitchPlace').value;
- persist();renderOpen();renderTrailerChoices();
- toast('Desengate registado.');
+ e.unhitchDate=$('unhitchDate').value||today();e.unhitchTime=$('unhitchTime').value;e.unhitchPlace=$('unhitchPlace').value;
+ persist();renderOpen();toast('Desengate registado.');
 }
-function renderHistory(){
- const date=$('searchDate').value;
- const truck=$('searchTruck').value.trim().toLowerCase();
- const trailer=$('searchTrailer').value.trim().toLowerCase();
+function searchHistory(){
+ const date=$('searchDate').value,truck=$('searchTruck').value.trim().toLowerCase(),trailer=$('searchTrailer').value.trim().toLowerCase();
  const results=Object.values(db.days).filter(d=>{
   if(date&&d.date!==date)return false;
-  const truckMatch=(d.trucks||[]).some(t=>(t.plate||'').toLowerCase().includes(truck));
-  const trailerMatch=db.trailerEvents.some(e=>e.hitchDate===d.date&&(e.plate||'').toLowerCase().includes(trailer));
-  if(truck&&!truckMatch)return false;
-  if(trailer&&!trailerMatch)return false;
+  if(truck&&!(d.trucks||[]).some(t=>(t.plate||'').toLowerCase().includes(truck))&&!(db.settings.defaultTruck||'').toLowerCase().includes(truck))return false;
+  if(trailer&&!db.trailerEvents.some(e=>(e.hitchDate<=d.date)&&(!e.unhitchDate||e.unhitchDate>=d.date)&&(e.plate||'').toLowerCase().includes(trailer)))return false;
   return true;
  }).sort((a,b)=>b.date.localeCompare(a.date));
-
- $('historyResults').innerHTML=results.map(d=>`
- <div class="item">
- <b>${esc(d.date)}</b><br>
- Descanso: ${esc(d.rest)} ${esc(d.otherRest)}<br>
- Início: ${esc(d.startTime)} — ${esc(d.startPlace)}<br>
- Fim: ${esc(d.endTime)} — ${esc(d.endPlace)}<br>
- Camiões: ${esc((d.trucks||[]).map(t=>t.plate).join(', '))}<br>
- Notas: ${esc(d.notes)}
- <br><button class="action" onclick="openDay('${d.date}')">Abrir dia</button>
- </div>`).join('')||'<p class="muted">Não foram encontrados registos.</p>';
+ $('historyResults').innerHTML=results.map(d=>`<div class="item"><b>${esc(d.date)}</b><br>Descanso: ${esc(d.rest)} ${esc(d.otherRest)}<br>Início: ${esc(d.startTime)} — ${esc(d.startPlace)}<br>Fim: ${esc(d.endTime)} — ${esc(d.endPlace)}<br>Camiões: ${esc((d.trucks||[]).map(t=>t.plate).join(', '))}<br>Notas: ${esc(d.notes)}<br><button class="action" onclick="openDay('${d.date}')">Abrir dia</button></div>`).join('')||'<p class="muted">Não foram encontrados registos.</p>';
 }
-function openDay(date){
- $('date').value=date;
- document.querySelector('[data-tab="day"]').click();
- loadDay();
-}
+function openDay(date){$('date').value=date;document.querySelector('[data-tab="day"]').click();loadDay()}
 function exportData(){
  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
- const url=URL.createObjectURL(blob);
- const a=document.createElement('a');
- a.href=url;a.download='diario-motorista-copia-'+today()+'.json';
- a.click();
- URL.revokeObjectURL(url);
- toast('Cópia exportada.');
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='diario-motorista-'+today()+'.json';a.click();URL.revokeObjectURL(url);
 }
 function importData(){
- const file=$('importFile').files[0];
- if(!file){toast('Escolhe primeiro um ficheiro.');return}
- const reader=new FileReader();
- reader.onload=()=>{
+ const f=$('importFile').files[0];if(!f){toast('Escolhe um ficheiro.');return}
+ const r=new FileReader();
+ r.onload=()=>{
   try{
-   const x=JSON.parse(reader.result);
-   if(!x.days||!Array.isArray(x.trailerEvents))throw new Error();
+   const x=JSON.parse(r.result);
+   if(!x.days||!Array.isArray(x.trailerEvents))throw Error();
    if(!confirm('Atenção: os dados atuais serão substituídos. Continuar?'))return;
-   db={days:x.days,trailerEvents:x.trailerEvents,settings:x.settings||{defaultTruck:''}};
-   persist();initialise();
-   toast('Cópia importada.');
-  }catch(e){toast('Ficheiro inválido ou incompatível.')}
+   db={days:x.days,trailerEvents:x.trailerEvents,settings:{defaultTruck:'',...(x.settings||{})}};
+   persist();initialise();toast('Cópia importada.');
+  }catch(e){toast('Ficheiro inválido.')}
  };
- reader.readAsText(file);
+ r.readAsText(f);
 }
 function initialise(){
  $('defaultTruck').value=db.settings.defaultTruck||'';
- $('defaultTruckView').textContent=db.settings.defaultTruck||'Ainda não definido nas definições.';
- renderTrailerChoices();
- loadDay();
- renderOpen();
+ renderChoices();loadDay();renderOpen();
 }
-document.querySelectorAll('nav button').forEach(btn=>{
- btn.addEventListener('click',()=>{
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));
-  btn.classList.add('active');
-  $(btn.dataset.tab).classList.add('active');
-  renderOpen();
- });
-});
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('main section').forEach(x=>x.classList.remove('active'));
+ b.classList.add('active');$(b.dataset.tab).classList.add('active');
+}));
 $('date').addEventListener('change',loadDay);
 $('saveDay').addEventListener('click',saveDay);
 $('saveInitialTrailer').addEventListener('click',saveInitialTrailer);
 $('addTruck').addEventListener('click',addTruck);
 $('hitchBtn').addEventListener('click',hitch);
 $('unhitchBtn').addEventListener('click',unhitch);
-$('searchBtn').addEventListener('click',renderHistory);
+$('searchBtn').addEventListener('click',searchHistory);
 $('clearSearch').addEventListener('click',()=>{
- $('searchDate').value='';
- $('searchTruck').value='';
- $('searchTrailer').value='';
+ ['searchDate','searchTruck','searchTrailer'].forEach(id=>$(id).value='');
  $('historyResults').innerHTML='';
 });
 $('exportBtn').addEventListener('click',exportData);
 $('importBtn').addEventListener('click',importData);
 $('saveSettings').addEventListener('click',()=>{
- db.settings.defaultTruck=$('defaultTruck').value.trim();
- persist();initialise();toast('Definições guardadas.');
+ db.settings.defaultTruck=$('defaultTruck').value.trim();persist();toast('Definições guardadas.');
 });
 load();
-$('date').value=today();
-$('hitchDate').value=today();
-$('unhitchDate').value=today();
+$('date').value=today();$('hitchDate').value=today();$('unhitchDate').value=today();
 initialise();
 </script>
 </body>
