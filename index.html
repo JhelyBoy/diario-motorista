@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17324d">
+<title>Diário do Motorista</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--navy:#17324d;--blue:#24577a;--bg:#f2f5f8;--card:#fff;--ink:#17212b;--muted:#657383;--line:#dce3e9;--red:#a63b3b;--green:#26734d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--navy);color:white;padding:22px 18px 18px;padding-top:calc(22px + env(safe-area-inset-top))}
+header h1{font-size:23px;margin:0 0 5px}header p{margin:0;color:#d6e2ec;font-size:13px}
+main{max-width:760px;margin:auto;padding:14px 13px 40px}
+nav{display:flex;gap:7px;overflow:auto;padding:3px 0 12px}
+nav button{white-space:nowrap;border:1px solid var(--line);background:white;color:var(--navy);border-radius:22px;padding:10px 14px;font-weight:650}
+nav button.active{background:var(--navy);color:white;border-color:var(--navy)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:12px;box-shadow:0 2px 8px #14283b0a}
+h2{font-size:18px;margin:0 0 13px;color:var(--navy)}h3{font-size:15px;margin:0 0 8px}
+label{display:block;font-size:13px;color:var(--muted);font-weight:650;margin:10px 0 5px}
+input,select,textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid #cbd5de;border-radius:9px;background:#fff;color:var(--ink);min-height:44px}
+textarea{min-height:76px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+button.primary{border:0;background:var(--blue);color:white;padding:12px 15px;border-radius:10px;font-weight:700;font-size:15px}
+button.secondary{border:1px solid var(--line);background:white;color:var(--navy);padding:10px 12px;border-radius:9px;font-weight:650}
+button.danger{background:#fff;color:var(--red);border:1px solid #e7caca;padding:9px 11px;border-radius:9px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.small{font-size:12px;color:var(--muted)}.pill{display:inline-block;background:#eaf1f6;color:var(--navy);padding:4px 8px;border-radius:20px;font-size:12px;font-weight:700}
+.item{border-top:1px solid var(--line);padding:12px 0}.item:first-child{border-top:0;padding-top:0}
+.empty{padding:18px;text-align:center;color:var(--muted);font-size:14px}.hidden{display:none!important}
+.notice{background:#eef5fa;border-left:4px solid var(--blue);padding:10px 12px;border-radius:7px;font-size:13px;color:#31495d;margin-bottom:12px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#17212b;color:white;padding:11px 16px;border-radius:24px;display:none;z-index:5;max-width:90%;font-size:14px}
+@media(max-width:420px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>Diário do Motorista</h1><p>Registo pessoal das jornadas, camiões e reboques</p></header>
+<main>
+<nav><button class="active" data-tab="day">Dia</button><button data-tab="trailers">Reboques</button><button data-tab="history">Histórico</button><button data-tab="backup">Backup</button><button data-tab="settings">Definições</button></nav>
+<section id="day">
+<div class="card">
+<h2>Registo do dia</h2>
+<div class="row"><div><label>Data</label><input id="date" type="date"></div><div><label>Descanso feito antes do dia</label><select id="rest"><option value="">Selecionar…</option><option>9 horas</option><option>11 horas</option><option>24 horas</option><option>45 horas</option><option>Descanso reduzido</option><option>Outro</option></select></div></div>
+<div id="otherRestWrap" class="hidden"><label>Indicar outro descanso</label><input id="otherRest" placeholder="Ex.: 36 horas"></div>
+<div class="row"><div><label>Início — hora</label><input id="startTime" type="time"></div><div><label>Início — local</label><input id="startPlace" placeholder="Local de início"></div></div>
+<div class="row"><div><label>Fim — hora</label><input id="endTime" type="time"></div><div><label>Fim — local</label><input id="endPlace" placeholder="Local de fim"></div></div>
+<label>Notas do dia</label><textarea id="notes" placeholder="Observações livres…"></textarea>
+<div class="actions"><button class="primary" id="saveDay">Guardar dia</button><button class="secondary" id="newDay">Hoje</button></div>
+</div>
+<div class="card"><h2>Camião utilizado / mudanças</h2><div class="notice">O camião habitual aparece como referência inicial. Regista cada troca com hora e local, incluindo quando regressas ao habitual.</div>
+<div class="row"><div><label>Hora da troca</label><input id="truckTime" type="time"></div><div><label>Matrícula do camião</label><input id="truckPlate" placeholder="AA-00-AA"></div></div>
+<label>Local da troca</label><input id="truckPlace" placeholder="Local">
+<label>Observações (opcional)</label><input id="truckNote" placeholder="Ex.: regresso ao camião habitual">
+<div class="actions"><button class="primary" id="addTruck">Adicionar troca</button></div><div id="truckList"></div>
+</div>
+<div class="card"><h2>Reboques ainda engatados</h2><div id="openTrailers"></div></div>
+</section>
+<section id="trailers" class="hidden">
+<div class="card"><h2>Engatar reboque</h2><div class="row"><div><label>Data</label><input id="hitchDate" type="date"></div><div><label>Hora</label><input id="hitchTime" type="time"></div></div>
+<label>Matrícula do reboque</label><input id="hitchPlate" placeholder="AA-00-AA"><label>Local onde engatou</label><input id="hitchPlace" placeholder="Local"><label>Notas (opcional)</label><input id="hitchNote" placeholder="Observações">
+<div class="actions"><button class="primary" id="addHitch">Registar engate</button></div></div>
+<div class="card"><h2>Reboques ainda engatados</h2><p class="small">Podes desengatar hoje um reboque que foi engatado noutro dia.</p><div id="activeTrailers"></div></div>
+<div class="card"><h2>Desengatar reboque</h2><label>Reboque</label><select id="unhitchSelect"><option value="">Escolher reboque engatado…</option></select>
+<div class="row"><div><label>Data</label><input id="unhitchDate" type="date"></div><div><label>Hora</label><input id="unhitchTime" type="time"></div></div>
+<label>Local onde desengatou</label><input id="unhitchPlace" placeholder="Local"><div class="actions"><button class="primary" id="addUnhitch">Registar desengate</button></div></div>
+</section>
+<section id="history" class="hidden"><div class="card"><h2>Pesquisar histórico</h2>
+<div class="row"><div><label>Data</label><input id="searchDate" type="date"></div><div><label>Matrícula do camião</label><input id="searchTruck" placeholder="Matrícula"></div></div>
+<label>Matrícula do reboque</label><input id="searchTrailer" placeholder="Matrícula"><div class="actions"><button class="primary" id="searchBtn">Pesquisar</button><button class="secondary" id="clearSearch">Limpar</button></div></div><div id="historyResults"></div></section>
+<section id="backup" class="hidden"><div class="card"><h2>Backup dos registos</h2><p>Exporta uma cópia para a app Ficheiros ou iCloud Drive. Guarda-a num local privado.</p>
+<div class="notice">A importação substitui os dados atuais. Antes de importar, exporta uma cópia do estado atual para não perderes alterações.</div>
+<div class="actions"><button class="primary" id="exportBtn">Exportar backup</button><label class="secondary" style="margin:0;display:inline-flex;align-items:center">Importar backup<input id="importFile" type="file" accept="application/json,.json" class="hidden"></label></div></div></section>
+<section id="settings" class="hidden"><div class="card"><h2>Definições</h2><label>Camião habitual (matrícula)</label><input id="defaultTruck" placeholder="AA-00-AA"><div class="actions"><button class="primary" id="saveSettings">Guardar definição</button></div></div>
+<div class="card"><h2>Privacidade e armazenamento</h2><p>Os registos ficam guardados localmente neste iPhone, no armazenamento do navegador da aplicação. Não são enviados para o GitHub.</p><p class="small">Se limpares os dados do Safari ou os dados do site, podes perder os registos. Mantém cópias de segurança atualizadas.</p></div></section>
+</main><div id="toast"></div>
+<script>
+const KEY='diarioMotorista_v1';let db={days:{},trailerEvents:[],settings:{defaultTruck:''}};
+const $=id=>document.getElementById(id),today=()=>{let d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function load(){try{let x=JSON.parse(localStorage.getItem(KEY));if(x&&x.days)db={...db,...x}}catch(e){}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(db))}
+function toast(s){let t=$('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',2300)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function dayObj(d){return db.days[d]||{date:d,rest:'',otherRest:'',startTime:'',startPlace:'',endTime:'',endPlace:'',notes:'',trucks:[]}}
+function currentOpen(){return db.trailerEvents.filter(x=>!x.unhitchDate)}
+function renderTruck(){let d=dayObj($('date').value),items=d.trucks||[];let initial=db.settings.defaultTruck?`<div class="item"><b>${esc(db.settings.defaultTruck)}</b> <span class="pill">Habitual / referência inicial</span><div class="small">Editável: regista uma troca se utilizares outro camião.</div></div>`:'';$('truckList').innerHTML=initial+(items.length?items.map(x=>`<div class="item"><b>${esc(x.plate)}</b> <span class="pill">${esc(x.time||'Hora não indicada')}</span><div class="small">${esc(x.place)} ${x.note?'· '+esc(x.note):''}</div><div class="actions"><button class="danger" onclick="deleteTruck('${x.id}')">Apagar</button></div></div>`).join(''):'<div class="empty">Ainda sem trocas de camião registadas.</div>')}
+function renderOpen(){let a=currentOpen(),s=a.length?a.map(x=>`<div class="item"><b>${esc(x.plate)}</b><div class="small">Engatado em ${esc(x.hitchDate)} às ${esc(x.hitchTime||'—')} · ${esc(x.hitchPlace||'local não indicado')}</div></div>`).join(''):'<div class="empty">Não há reboques marcados como engatados.</div>';$('openTrailers').innerHTML=s;$('activeTrailers').innerHTML=s;$('unhitchSelect').innerHTML='<option value="">Escolher reboque engatado…</option>'+a.map(x=>`<option value="${x.id}">${esc(x.plate)} — desde ${esc(x.hitchDate)}</option>`).join('')}
+function renderHistory(){let qd=$('searchDate').value,qt=$('searchTruck').value.trim().toUpperCase(),qr=$('searchTrailer').value.trim().toUpperCase(),out=[];
+Object.values(db.days).sort((a,b)=>b.date.localeCompare(a.date)).forEach(d=>{let trucks=d.trucks||[],trailerHits=db.trailerEvents.filter(t=>(t.hitchDate===d.date||t.unhitchDate===d.date)&&(!qr||t.plate.toUpperCase().includes(qr)));let matchDate=!qd||d.date===qd,matchTruck=!qt||((db.settings.defaultTruck||'').toUpperCase().includes(qt)||trucks.some(t=>t.plate.toUpperCase().includes(qt))),matchTrailer=!qr||trailerHits.length>0;if(matchDate&&matchTruck&&matchTrailer)out.push(`<div class="card"><h3>${esc(d.date)}</h3><div>${esc(d.startTime||'—')} ${esc(d.startPlace||'')} → ${esc(d.endTime||'—')} ${esc(d.endPlace||'')}</div><div class="small">Descanso: ${esc(d.rest==='Outro'?d.otherRest:d.rest||'não indicado')}</div>${trucks.map(t=>`<div class="small">Troca de camião: ${esc(t.plate)} · ${esc(t.time)} · ${esc(t.place)}</div>`).join('')}${trailerHits.map(t=>`<div class="small">Reboque ${esc(t.plate)}: ${t.hitchDate===d.date?'engatado':'já vinha engatado'}${t.unhitchDate===d.date?' · desengatado':' · continua engatado'}</div>`).join('')}<p>${esc(d.notes||'')}</p></div>`)});$('historyResults').innerHTML=out.length?out.join(''):'<div class="card empty">Não foram encontrados registos com esses critérios.</div>'}
+function loadDay(){let d=dayObj($('date').value);$('rest').value=d.rest;$('otherRest').value=d.otherRest;$('otherRestWrap').classList.toggle('hidden',d.rest!=='Outro');$('startTime').value=d.startTime;$('startPlace').value=d.startPlace;$('endTime').value=d.endTime;$('endPlace').value=d.endPlace;$('notes').value=d.notes;renderTruck()}
+function saveDay(){let d=$('date').value;if(!d)return toast('Escolhe a data.');let o=dayObj(d);Object.assign(o,{date:d,rest:$('rest').value,otherRest:$('otherRest').value,startTime:$('startTime').value,startPlace:$('startPlace').value.trim(),endTime:$('endTime').value,endPlace:$('endPlace').value.trim(),notes:$('notes').value.trim()});db.days[d]=o;persist();toast('Dia guardado.')}
+$('date').value=today();$('hitchDate').value=today();$('unhitchDate').value=today();load();
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');['day','trailers','history','backup','settings'].forEach(id=>$(id).classList.toggle('hidden',id!==b.dataset.tab));if(b.dataset.tab==='trailers')renderOpen();if(b.dataset.tab==='history')renderHistory()});
+$('date').onchange=loadDay;$('rest').onchange=()=>$('otherRestWrap').classList.toggle('hidden',$('rest').value!=='Outro');$('saveDay').onclick=saveDay;$('newDay').onclick=()=>{$('date').value=today();loadDay()};
+$('addTruck').onclick=()=>{let d=$('date').value,plate=$('truckPlate').value.trim().toUpperCase();if(!plate)return toast('Indica a matrícula do camião.');let o=dayObj(d);o.trucks.push({id:uid(),time:$('truckTime').value,plate,place:$('truckPlace').value.trim(),note:$('truckNote').value.trim()});db.days[d]=o;persist();$('truckPlate').value=$('truckPlace').value=$('truckNote').value=$('truckTime').value='';renderTruck();toast('Troca de camião guardada.')};
+window.deleteTruck=id=>{let d=dayObj($('date').value);d.trucks=d.trucks.filter(x=>x.id!==id);db.days[d.date]=d;persist();renderTruck()};
+$('addHitch').onclick=()=>{let plate=$('hitchPlate').value.trim().toUpperCase();if(!plate)return toast('Indica a matrícula do reboque.');db.trailerEvents.push({id:uid(),plate,hitchDate:$('hitchDate').value||today(),hitchTime:$('hitchTime').value,hitchPlace:$('hitchPlace').value.trim(),hitchNote:$('hitchNote').value.trim(),unhitchDate:'',unhitchTime:'',unhitchPlace:''});persist();$('hitchPlate').value=$('hitchPlace').value=$('hitchNote').value=$('hitchTime').value='';renderOpen();toast('Engate registado.')};
+$('addUnhitch').onclick=()=>{let x=db.trailerEvents.find(t=>t.id===$('unhitchSelect').value);if(!x)return toast('Escolhe um reboque.');x.unhitchDate=$('unhitchDate').value||today();x.unhitchTime=$('unhitchTime').value;x.unhitchPlace=$('unhitchPlace').value.trim();persist();renderOpen();toast('Desengate registado.')};
+$('searchBtn').onclick=renderHistory;$('clearSearch').onclick=()=>{$('searchDate').value=$('searchTruck').value=$('searchTrailer').value='';renderHistory()};
+$('defaultTruck').value=db.settings.defaultTruck||'';$('saveSettings').onclick=()=>{db.settings.defaultTruck=$('defaultTruck').value.trim().toUpperCase();persist();renderTruck();toast('Camião habitual guardado.')};
+$('exportBtn').onclick=()=>{persist();let blob=new Blob([JSON.stringify({app:'Diário do Motorista',version:1,exportedAt:new Date().toISOString(),data:db},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='backup-diario-motorista-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('importFile').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let j=JSON.parse(await f.text()),incoming=j.data||j;if(!incoming.days||!Array.isArray(incoming.trailerEvents))throw Error('Formato inválido');if(!confirm('Importar este backup vai substituir todos os registos atuais. Continuar?'))return;db=incoming;persist();loadDay();renderOpen();$('defaultTruck').value=db.settings?.defaultTruck||'';toast('Backup importado.')}catch(err){toast('Não foi possível ler esse backup.')}e.target.value=''};
+loadDay();renderOpen();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script></body></html>

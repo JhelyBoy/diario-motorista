@@ -1,0 +1,21 @@
+DIÁRIO DO MOTORISTA — primeira versão
+
+PUBLICAÇÃO
+1. Cria um repositório GitHub para esta aplicação.
+2. Carrega os quatro ficheiros diretamente na raiz do repositório.
+3. Ativa Settings > Pages > Deploy from a branch > main > /(root).
+4. Abre o endereço publicado no Safari do iPhone.
+5. Escolhe Partilhar > Adicionar ao ecrã principal.
+
+DADOS E PRIVACIDADE
+Os registos são guardados localmente no armazenamento deste site/aplicação.
+Não são enviados para o GitHub. O GitHub aloja apenas os ficheiros da aplicação.
+Não limpes os dados do site sem exportar primeiro um backup.
+
+BACKUPS
+No separador Backup, escolhe Exportar backup e guarda o ficheiro JSON na app Ficheiros/iCloud Drive.
+Para recuperar, escolhe Importar backup e seleciona o JSON.
+A importação substitui os dados existentes. Exporta primeiro os dados atuais.
+
+NOTA
+Esta aplicação é um diário pessoal. Não calcula limites legais nem substitui o tacógrafo.
