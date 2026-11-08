@@ -30,6 +30,9 @@ textarea{min-height:85px}
 .danger{background:#b93838;color:white}
 .item{padding:12px 0;border-bottom:1px solid #e5e8eb;font-size:14px}
 .muted{color:#687782;font-size:13px}
+.status{font-size:13px;font-weight:bold;margin:0 0 12px;padding:9px 11px;border-radius:7px;background:#e7edf1;color:#344}
+.status.open{background:#fff3d8;color:#805500}
+.status.closed{background:#e1f3e7;color:#24643a}
 hr{border:0;border-top:1px solid #e5e8eb;margin:16px 0}
 @media(max-width:480px){.grid{grid-template-columns:1fr}}
 </style>
@@ -50,6 +53,7 @@ hr{border:0;border-top:1px solid #e5e8eb;margin:16px 0}
 <section id="day" class="active">
 <div class="card">
 <h2>Registo do dia</h2>
+<div id="dayStatus" class="status open">Dia em curso — os campos são guardados automaticamente.</div>
 <label>Data</label><input type="date" id="date">
 <label>Tipo de descanso</label>
 <select id="rest">
@@ -66,7 +70,8 @@ hr{border:0;border-top:1px solid #e5e8eb;margin:16px 0}
 <div><label>Local de fim</label><input id="endPlace" placeholder="Local"></div>
 </div>
 <label>Notas do dia</label><textarea id="notes" placeholder="Observações..."></textarea>
-<button class="action" id="saveDay">Guardar dia</button>
+<p class="muted" id="autoSaveInfo">As alterações são guardadas automaticamente neste dispositivo.</p>
+<button class="action" id="closeDay">Fechar dia</button>
 </div>
 
 <div class="card">
@@ -180,7 +185,7 @@ function load(){
  }catch(e){toast('Erro ao ler dados guardados.')}
 }
 function dayObj(date){
- return db.days[date]||{date,rest:'',otherRest:'',startTime:'',startPlace:'',endTime:'',endPlace:'',notes:'',trucks:[],initialEventId:''};
+ return db.days[date]||{date,rest:'',otherRest:'',startTime:'',startPlace:'',endTime:'',endPlace:'',notes:'',trucks:[],initialEventId:'',closed:false};
 }
 function openEvents(){return db.trailerEvents.filter(e=>!e.unhitchDate)}
 function renderChoices(){
@@ -203,21 +208,52 @@ function renderOpen(){
  $('unhitchSelect').innerHTML=openEvents().map(e=>`<option value="${e.id}">${esc(e.plate)} — ${esc(e.hitchDate)}</option>`).join('')||'<option value="">Nenhum reboque engatado</option>';
  $('trailerHistory').innerHTML=db.trailerEvents.slice().reverse().map(e=>`<div class="item"><b>${esc(e.plate)}</b><br>Engate: ${esc(e.hitchDate)} ${esc(e.hitchTime)} — ${esc(e.hitchPlace)}<br>Desengate: ${esc(e.unhitchDate||'Ainda engatado')} ${esc(e.unhitchTime)} — ${esc(e.unhitchPlace)}</div>`).join('')||'<p class="muted">Sem registos.</p>';
 }
+function updateDayStatus(d){
+ if(d.closed){
+  $('dayStatus').className='status closed';
+  $('dayStatus').textContent='Dia fechado.';
+  $('closeDay').textContent='Reabrir dia';
+ }else{
+  $('dayStatus').className='status open';
+  $('dayStatus').textContent='Dia em curso — os campos são guardados automaticamente.';
+  $('closeDay').textContent='Fechar dia';
+ }
+}
 function loadDay(){
  const d=dayObj($('date').value);
  ['rest','otherRest','startTime','startPlace','endTime','endPlace','notes'].forEach(id=>$(id).value=d[id]||'');
  $('initialTrailer').value='';$('newInitialTrailer').value='';
  $('initialStatus').textContent=d.initialEventId?'Já existe um reboque inicial associado a este dia.':'Escolhe um reboque ou deixa sem reboque.';
+ updateDayStatus(d);
  renderTrucks(d);renderOpen();
 }
-function saveDay(){
- const date=$('date').value;if(!date){toast('Escolhe a data.');return}
+function autoSaveDay(){
+ const date=$('date').value;
+ if(!date)return;
  const d=dayObj(date);
  ['rest','otherRest','startTime','startPlace','endTime','endPlace','notes'].forEach(id=>d[id]=$(id).value);
- db.days[date]=d;persist();toast('Dia guardado.');
+ db.days[date]=d;
+ persist();
+ $('autoSaveInfo').textContent='Guardado automaticamente às '+new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})+'.';
+}
+function closeDay(){
+ const date=$('date').value;
+ if(!date){toast('Escolhe a data.');return}
+ autoSaveDay();
+ const d=dayObj(date);
+ if(d.closed){
+  d.closed=false;
+  toast('Dia reaberto. Podes continuar a alterar o registo.');
+ }else{
+  if(!d.endTime){toast('Introduz a hora de fim antes de fechar o dia.');return}
+  d.closed=true;
+  toast('Dia fechado e guardado no histórico.');
+ }
+ db.days[date]=d;persist();updateDayStatus(d);
 }
 function saveInitialTrailer(){
  const date=$('date').value;if(!date){toast('Escolhe a data.');return}
+ autoSaveDay();
  const d=dayObj(date);
  const plate=$('newInitialTrailer').value.trim()||$('initialTrailer').value.trim();
  let old=d.initialEventId?db.trailerEvents.find(e=>e.id===d.initialEventId):null;
@@ -235,6 +271,7 @@ function saveInitialTrailer(){
 function addTruck(){
  const plate=$('truckPlate').value.trim(),date=$('date').value;
  if(!date||!plate){toast('Indica a data e a matrícula.');return}
+ autoSaveDay();
  const d=dayObj(date);d.trucks.push({plate,time:$('truckTime').value,place:$('truckPlace').value,note:$('truckNote').value});
  db.days[date]=d;persist();
  ['truckPlate','truckTime','truckPlace','truckNote'].forEach(id=>$(id).value='');
@@ -261,7 +298,7 @@ function searchHistory(){
   if(trailer&&!db.trailerEvents.some(e=>(e.hitchDate<=d.date)&&(!e.unhitchDate||e.unhitchDate>=d.date)&&(e.plate||'').toLowerCase().includes(trailer)))return false;
   return true;
  }).sort((a,b)=>b.date.localeCompare(a.date));
- $('historyResults').innerHTML=results.map(d=>`<div class="item"><b>${esc(d.date)}</b><br>Descanso: ${esc(d.rest)} ${esc(d.otherRest)}<br>Início: ${esc(d.startTime)} — ${esc(d.startPlace)}<br>Fim: ${esc(d.endTime)} — ${esc(d.endPlace)}<br>Camiões: ${esc((d.trucks||[]).map(t=>t.plate).join(', '))}<br>Notas: ${esc(d.notes)}<br><button class="action" onclick="openDay('${d.date}')">Abrir dia</button></div>`).join('')||'<p class="muted">Não foram encontrados registos.</p>';
+ $('historyResults').innerHTML=results.map(d=>`<div class="item"><b>${esc(d.date)}</b> — <b>${d.closed?'Fechado':'Em curso'}</b><br>Descanso: ${esc(d.rest)} ${esc(d.otherRest)}<br>Início: ${esc(d.startTime)} — ${esc(d.startPlace)}<br>Fim: ${esc(d.endTime)} — ${esc(d.endPlace)}<br>Camiões: ${esc((d.trucks||[]).map(t=>t.plate).join(', '))}<br>Notas: ${esc(d.notes)}<br><button class="action" onclick="openDay('${d.date}')">Abrir dia</button></div>`).join('')||'<p class="muted">Não foram encontrados registos.</p>';
 }
 function openDay(date){$('date').value=date;document.querySelector('[data-tab="day"]').click();loadDay()}
 function exportData(){
@@ -293,7 +330,11 @@ document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()
  b.classList.add('active');$(b.dataset.tab).classList.add('active');
 }));
 $('date').addEventListener('change',loadDay);
-$('saveDay').addEventListener('click',saveDay);
+['rest','otherRest','startTime','startPlace','endTime','endPlace','notes'].forEach(id=>{
+ $(id).addEventListener('input',autoSaveDay);
+ $(id).addEventListener('change',autoSaveDay);
+});
+$('closeDay').addEventListener('click',closeDay);
 $('saveInitialTrailer').addEventListener('click',saveInitialTrailer);
 $('addTruck').addEventListener('click',addTruck);
 $('hitchBtn').addEventListener('click',hitch);
