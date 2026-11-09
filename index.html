@@ -23,7 +23,7 @@ input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-ra
 textarea{min-height:90px;resize:vertical}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .small{font-size:12px;color:#64748b}
-.summary{background:#eff6ff;padding:12px;border-radius:8px;margin-top:10px;font-size:14px}
+.summary{background:#eff6ff;padding:12px;border-radius:8px;margin-top:10px;font-size:14px;cursor:pointer}
 .status{padding:10px;border-radius:8px;background:#f1f5f9;font-size:14px;margin:8px 0}
 .event{border-left:4px solid #2563eb;padding:9px 12px;margin:9px 0;background:#f8fafc;border-radius:5px;font-size:14px}
 .hidden{display:none!important}
@@ -33,7 +33,10 @@ summary{font-weight:bold;color:#1e40af;cursor:pointer;padding:6px 0}
 .action{width:100%;border:0;border-radius:9px;padding:15px;background:#b91c1c;color:white;font-weight:bold;font-size:16px;margin-top:12px}
 .secondary{background:#475569}
 .notice{font-size:13px;color:#475569;background:#f8fafc;padding:10px;border-radius:8px}
+.editButton{border:0;border-radius:7px;padding:9px 12px;background:#1d4ed8;color:white;font-weight:bold;margin:9px 6px 0 0}
+.cancelButton{border:0;border-radius:7px;padding:9px 12px;background:#64748b;color:white;font-weight:bold;margin-top:9px}
 footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
+button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 @media(max-width:420px){nav button{font-size:11px;padding:10px 1px}.grid{gap:8px}}
 </style>
 </head>
@@ -109,6 +112,11 @@ footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
 <input id="hitchPlace" type="text" placeholder="Local">
 <p class="small" id="hitchStatus">Preenche os dados para registar o engate automaticamente.</p>
 
+<div id="hitchEditControls" class="hidden">
+<button class="action" id="saveHitchEdit">Guardar alterações do engate</button>
+<button class="cancelButton" id="cancelHitchEdit">Cancelar edição</button>
+</div>
+
 <hr style="border:0;border-top:1px solid #e2e8f0;margin:18px 0">
 
 <h3>Desengatar reboque</h3>
@@ -128,6 +136,11 @@ footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
 <label for="unhitchPlace">Local do desengate</label>
 <input id="unhitchPlace" type="text" placeholder="Local">
 <p class="small" id="unhitchStatus">Preenche os dados para registar o desengate automaticamente.</p>
+
+<div id="unhitchEditControls" class="hidden">
+<button class="action" id="saveUnhitchEdit">Guardar alterações do desengate</button>
+<button class="cancelButton" id="cancelUnhitchEdit">Cancelar edição</button>
+</div>
 
 <details>
 <summary>Histórico de movimentos dos reboques</summary>
@@ -216,6 +229,13 @@ footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
 <input id="defaultTruck" type="text" placeholder="Matrícula do camião">
 <p class="small">A matrícula fica guardada automaticamente.</p>
 </div>
+
+<div class="card">
+<h2>Limpar todos os dados</h2>
+<p>Apaga todos os dias, históricos, descansos, movimentos e matrículas dos reboques, mudanças de camião e configurações, incluindo o camião habitual.</p>
+<p class="small">Esta operação não pode ser desfeita. Se quiseres guardar os dados atuais, exporta primeiro uma cópia de segurança.</p>
+<button class="action" id="clearAllBtn">Apagar tudo e começar de novo</button>
+</div>
 </section>
 
 </main>
@@ -241,6 +261,8 @@ let currentDate=today();
 let hitchDraft='';
 let unhitchDraft='';
 let truckDraft='';
+let editingHitchId=null;
+let editingUnhitchId=null;
 
 function load(){
  try{
@@ -249,16 +271,17 @@ function load(){
    const old=JSON.parse(raw);
    data={
     days:old.days||{},
-    trailerEvents:old.trailerEvents||[],
+    trailerEvents:Array.isArray(old.trailerEvents)?old.trailerEvents:[],
     settings:{defaultTruck:(old.settings||{}).defaultTruck||''},
-    trailerPlates:old.trailerPlates||[]
+    trailerPlates:Array.isArray(old.trailerPlates)?old.trailerPlates:[]
    };
   }
  }catch(e){
   alert('Não foi possível ler os dados guardados.');
  }
 
- data.trailerEvents.forEach(e=>{
+ data.trailerEvents.forEach((e,index)=>{
+  if(!e.id)e.id='movimento-'+index+'-'+Date.now();
   if(e.plate&&!data.trailerPlates.includes(e.plate)){
    data.trailerPlates.push(e.plate);
   }
@@ -332,6 +355,10 @@ function fillDay(){
  hitchDraft='';
  unhitchDraft='';
  truckDraft='';
+ editingHitchId=null;
+ editingUnhitchId=null;
+ $('hitchEditControls').classList.add('hidden');
+ $('unhitchEditControls').classList.add('hidden');
 
  renderStart();
  renderTrailer();
@@ -361,6 +388,16 @@ function renderStart(){
  }
 }
 
+// Só recolhe os campos quando o utilizador sai de toda a área de início.
+$('startFields').addEventListener('focusout',event=>{
+ if(event.relatedTarget&&$('startFields').contains(event.relatedTarget))return;
+ setTimeout(()=>{
+  if(!$('startFields').contains(document.activeElement)){
+   renderStart();
+  }
+ },0);
+});
+
 function openEvents(){
  return data.trailerEvents.filter(e=>!e.unhitchDate);
 }
@@ -375,16 +412,6 @@ function renderTrailer(){
  }else{
   $('trailerStatus').textContent='Atenção: existem vários reboques registados como engatados. Verifica os registos.';
  }
-
- $('trailerSelect').disabled=active.length!==0;
- $('newPlate').disabled=active.length!==0;
- $('hitchDate').disabled=active.length!==0;
- $('hitchTime').disabled=active.length!==0;
- $('hitchPlace').disabled=active.length!==0;
-
- $('unhitchDate').disabled=active.length!==1;
- $('unhitchTime').disabled=active.length!==1;
- $('unhitchPlace').disabled=active.length!==1;
 
  const select=$('trailerSelect');
  const previous=select.value;
@@ -413,6 +440,23 @@ function renderTrailer(){
 
  $('newPlateArea').classList.toggle('hidden',select.value!=='__new__');
 
+ const editingHitch=editingHitchId!==null;
+ const editingUnhitch=editingUnhitchId!==null;
+
+ const hitchBlocked=active.length!==0&&!editingHitch;
+ const unhitchBlocked=active.length!==1&&!editingUnhitch;
+
+ ['trailerSelect','newPlate','hitchDate','hitchTime','hitchPlace'].forEach(id=>{
+  $(id).disabled=hitchBlocked;
+ });
+
+ ['unhitchDate','unhitchTime','unhitchPlace'].forEach(id=>{
+  $(id).disabled=unhitchBlocked;
+ });
+
+ $('hitchEditControls').classList.toggle('hidden',!editingHitch);
+ $('unhitchEditControls').classList.toggle('hidden',!editingUnhitch);
+
  const events=[...data.trailerEvents].sort((a,b)=>
   ((b.hitchDate||'')+(b.hitchTime||'')).localeCompare((a.hitchDate||'')+(a.hitchTime||''))
  );
@@ -425,10 +469,169 @@ function renderTrailer(){
    '<div>Engatado: '+esc(e.hitchDate)+' às '+esc(e.hitchTime)+' — '+esc(e.hitchPlace)+'</div>'+
    '<div>Desengatado: '+(e.unhitchDate?
     esc(e.unhitchDate)+' às '+esc(e.unhitchTime)+' — '+esc(e.unhitchPlace):
-    'Ainda engatado')+'</div></div>'
+    'Ainda engatado')+'</div>'+
+   '<button type="button" class="editButton" data-edit-hitch="'+esc(e.id)+'">Editar engate</button>'+
+   (e.unhitchDate?
+    '<button type="button" class="editButton" data-edit-unhitch="'+esc(e.id)+'">Editar desengate</button>':'')+
+   '</div>'
   ).join('');
+
+  $('trailerHistory').querySelectorAll('[data-edit-hitch]').forEach(btn=>{
+   btn.onclick=()=>editHitch(btn.dataset.editHitch);
+  });
+
+  $('trailerHistory').querySelectorAll('[data-edit-unhitch]').forEach(btn=>{
+   btn.onclick=()=>editUnhitch(btn.dataset.editUnhitch);
+  });
  }
 }
+
+function editHitch(id){
+ if(getDay().closed){
+  alert('Reabre o dia antes de editar os movimentos.');
+  return;
+ }
+
+ const event=data.trailerEvents.find(e=>e.id===id);
+ if(!event)return;
+
+ editingHitchId=id;
+ editingUnhitchId=null;
+
+ if(!data.trailerPlates.includes(event.plate)){
+  data.trailerPlates.push(event.plate);
+ }
+
+ renderTrailer();
+ $('trailerSelect').value=event.plate;
+ $('newPlateArea').classList.add('hidden');
+ setValue('hitchDate',event.hitchDate);
+ setValue('hitchTime',event.hitchTime);
+ setValue('hitchPlace',event.hitchPlace);
+
+ $('hitchStatus').textContent='A editar o engate de '+event.plate+'.';
+ $('hitchEditControls').classList.remove('hidden');
+ $('unhitchEditControls').classList.add('hidden');
+ $('hitchDate').scrollIntoView({behavior:'smooth',block:'center'});
+ renderClosed();
+}
+
+function saveHitchEdit(){
+ const event=data.trailerEvents.find(e=>e.id===editingHitchId);
+ if(!event)return;
+
+ let plate=$('trailerSelect').value;
+ if(plate==='__new__')plate=$('newPlate').value.trim().toUpperCase();
+
+ const date=$('hitchDate').value;
+ const time=$('hitchTime').value;
+ const place=$('hitchPlace').value.trim();
+
+ if(!plate||!date||!time||!place){
+  alert('Preenche a matrícula, a data, a hora e o local do engate.');
+  return;
+ }
+
+ if(!data.trailerPlates.includes(plate))data.trailerPlates.push(plate);
+
+ event.plate=plate;
+ event.hitchDate=date;
+ event.hitchTime=time;
+ event.hitchPlace=place;
+
+ editingHitchId=null;
+ $('hitchStatus').textContent='Engate atualizado com sucesso.';
+ $('hitchEditControls').classList.add('hidden');
+
+ $('hitchTime').value='';
+ $('hitchPlace').value='';
+ $('newPlate').value='';
+ $('trailerSelect').value='';
+
+ save();
+ renderTrailer();
+ renderClosed();
+}
+
+function cancelHitchEdit(){
+ editingHitchId=null;
+ $('hitchEditControls').classList.add('hidden');
+ $('hitchTime').value='';
+ $('hitchPlace').value='';
+ $('newPlate').value='';
+ $('trailerSelect').value='';
+ $('hitchStatus').textContent='Edição cancelada.';
+ renderTrailer();
+ renderClosed();
+}
+
+function editUnhitch(id){
+ if(getDay().closed){
+  alert('Reabre o dia antes de editar os movimentos.');
+  return;
+ }
+
+ const event=data.trailerEvents.find(e=>e.id===id);
+ if(!event||!event.unhitchDate)return;
+
+ editingUnhitchId=id;
+ editingHitchId=null;
+
+ renderTrailer();
+ setValue('unhitchDate',event.unhitchDate);
+ setValue('unhitchTime',event.unhitchTime);
+ setValue('unhitchPlace',event.unhitchPlace);
+
+ $('unhitchStatus').textContent='A editar o desengate de '+event.plate+'.';
+ $('unhitchEditControls').classList.remove('hidden');
+ $('hitchEditControls').classList.add('hidden');
+ $('unhitchDate').scrollIntoView({behavior:'smooth',block:'center'});
+ renderClosed();
+}
+
+function saveUnhitchEdit(){
+ const event=data.trailerEvents.find(e=>e.id===editingUnhitchId);
+ if(!event)return;
+
+ const date=$('unhitchDate').value;
+ const time=$('unhitchTime').value;
+ const place=$('unhitchPlace').value.trim();
+
+ if(!date||!time||!place){
+  alert('Preenche a data, a hora e o local do desengate.');
+  return;
+ }
+
+ event.unhitchDate=date;
+ event.unhitchTime=time;
+ event.unhitchPlace=place;
+
+ editingUnhitchId=null;
+ $('unhitchStatus').textContent='Desengate atualizado com sucesso.';
+ $('unhitchEditControls').classList.add('hidden');
+
+ $('unhitchTime').value='';
+ $('unhitchPlace').value='';
+
+ save();
+ renderTrailer();
+ renderClosed();
+}
+
+function cancelUnhitchEdit(){
+ editingUnhitchId=null;
+ $('unhitchEditControls').classList.add('hidden');
+ $('unhitchTime').value='';
+ $('unhitchPlace').value='';
+ $('unhitchStatus').textContent='Edição cancelada.';
+ renderTrailer();
+ renderClosed();
+}
+
+$('saveHitchEdit').onclick=saveHitchEdit;
+$('cancelHitchEdit').onclick=cancelHitchEdit;
+$('saveUnhitchEdit').onclick=saveUnhitchEdit;
+$('cancelUnhitchEdit').onclick=cancelUnhitchEdit;
 
 function renderTruckChanges(){
  const changes=getDay().trucks||[];
@@ -450,11 +653,17 @@ function renderClosed(){
  $('closeDay').classList.toggle('hidden',!!d.closed);
  $('reopenDay').classList.toggle('hidden',!d.closed);
 
- ['rest','startTime','startPlace','endTime','endPlace','notes',
+ [
+  'rest','startTime','startPlace','endTime','endPlace','notes',
   'trailerSelect','newPlate','hitchDate','hitchTime','hitchPlace',
   'unhitchDate','unhitchTime','unhitchPlace',
-  'truckChangeDate','truckChangeTime','truckChangePlace','truckChangeTruck'
+  'truckChangeDate','truckChangeTime','truckChangePlace','truckChangeTruck',
+  'saveHitchEdit','cancelHitchEdit','saveUnhitchEdit','cancelUnhitchEdit'
  ].forEach(id=>$(id).disabled=!!d.closed);
+
+ document.querySelectorAll('#trailerHistory button').forEach(btn=>{
+  btn.disabled=!!d.closed;
+ });
 }
 
 function updateDayField(id,key){
@@ -464,14 +673,6 @@ function updateDayField(id,key){
   getDay()[key]=field.value;
   save();
  });
-
- // Só atualiza/recolhe o resumo quando terminas de editar o campo.
- // Assim, o campo não desaparece enquanto estás a escrever.
- if(key==='startTime'||key==='startPlace'||key==='rest'){
-  field.addEventListener('change',()=>{
-   renderStart();
-  });
- }
 }
 
 $('dayDate').value=currentDate;
@@ -489,10 +690,11 @@ updateDayField('notes','notes');
 
 $('trailerSelect').addEventListener('change',()=>{
  $('newPlateArea').classList.toggle('hidden',$('trailerSelect').value!=='__new__');
- hitchDraft='';
 });
 
 function tryHitch(){
+ if(editingHitchId!==null)return;
+
  const active=openEvents();
 
  if(active.length!==0){
@@ -526,7 +728,7 @@ function tryHitch(){
  }
 
  data.trailerEvents.push({
-  id:Date.now().toString(),
+  id:'mov-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),
   plate:plate,
   hitchDate:date,
   hitchTime:time,
@@ -543,17 +745,21 @@ function tryHitch(){
  $('hitchPlace').value='';
  $('newPlate').value='';
  $('trailerSelect').value='';
+ $('newPlateArea').classList.add('hidden');
 
  save();
  renderTrailer();
+ renderClosed();
 }
 
+// Só tenta registar quando o campo é terminado, nunca a cada letra digitada.
 ['newPlate','hitchDate','hitchTime','hitchPlace'].forEach(id=>{
- $(id).addEventListener('input',tryHitch);
  $(id).addEventListener('change',tryHitch);
 });
 
 function tryUnhitch(){
+ if(editingUnhitchId!==null)return;
+
  const active=openEvents();
 
  if(active.length!==1){
@@ -582,10 +788,10 @@ function tryUnhitch(){
 
  save();
  renderTrailer();
+ renderClosed();
 }
 
 ['unhitchDate','unhitchTime','unhitchPlace'].forEach(id=>{
- $(id).addEventListener('input',tryUnhitch);
  $(id).addEventListener('change',tryUnhitch);
 });
 
@@ -623,7 +829,6 @@ function tryTruckChange(){
 }
 
 ['truckChangeDate','truckChangeTime','truckChangePlace','truckChangeTruck'].forEach(id=>{
- $(id).addEventListener('input',tryTruckChange);
  $(id).addEventListener('change',tryTruckChange);
 });
 
@@ -703,6 +908,39 @@ $('defaultTruck').addEventListener('input',()=>{
  save();
 });
 
+$('clearAllBtn').onclick=()=>{
+ const first=confirm(
+  'ATENÇÃO: vais apagar todos os dias, históricos, descansos, reboques, matrículas e configurações, incluindo o camião habitual. Queres continuar?'
+ );
+
+ if(!first)return;
+
+ const second=confirm(
+  'CONFIRMAÇÃO FINAL: todos os dados serão eliminados permanentemente deste dispositivo. Tens a certeza?'
+ );
+
+ if(!second)return;
+
+ localStorage.removeItem(KEY);
+
+ data={
+  days:{},
+  trailerEvents:[],
+  settings:{defaultTruck:''},
+  trailerPlates:[]
+ };
+
+ currentDate=today();
+ $('dayDate').value=currentDate;
+ $('defaultTruck').value='';
+
+ fillDay();
+ renderHistory();
+
+ alert('Todos os dados foram apagados. A aplicação está pronta para começar de novo.');
+ showTab('dia');
+};
+
 $('exportBtn').onclick=()=>{
  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob);
@@ -742,7 +980,8 @@ $('importBtn').onclick=()=>{
     trailerPlates:Array.isArray(imported.trailerPlates)?imported.trailerPlates:[]
    };
 
-   data.trailerEvents.forEach(e=>{
+   data.trailerEvents.forEach((e,index)=>{
+    if(!e.id)e.id='movimento-importado-'+index+'-'+Date.now();
     if(e.plate&&!data.trailerPlates.includes(e.plate)){
      data.trailerPlates.push(e.plate);
     }
@@ -750,6 +989,7 @@ $('importBtn').onclick=()=>{
 
    save();
    fillDay();
+   setValue('defaultTruck',data.settings.defaultTruck);
    alert('Cópia restaurada com sucesso.');
   }catch(e){
    alert('Não foi possível importar. Confirma que escolheste uma cópia válida.');
