@@ -64,11 +64,9 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 
 <div class="card">
 <h2>Início do serviço</h2>
-
 <div id="startFields">
 <label for="rest">Descanso antes de iniciar o serviço</label>
 <input id="rest" type="text" placeholder="Ex.: 11h00">
-
 <div class="grid">
 <div>
 <label for="startTime">Hora de início</label>
@@ -80,7 +78,6 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 </div>
 </div>
 </div>
-
 <div id="startSummary" class="summary hidden"></div>
 </div>
 
@@ -88,6 +85,7 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <h2>Reboques</h2>
 <div id="trailerStatus" class="status"></div>
 
+<div id="hitchSection">
 <h3>Engatar reboque</h3>
 <label for="trailerSelect">Matrícula do reboque</label>
 <select id="trailerSelect"></select>
@@ -116,9 +114,11 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <button class="action" id="saveHitchEdit">Guardar alterações do engate</button>
 <button class="cancelButton" id="cancelHitchEdit">Cancelar edição</button>
 </div>
+</div>
 
 <hr style="border:0;border-top:1px solid #e2e8f0;margin:18px 0">
 
+<div id="unhitchSection">
 <h3>Desengatar reboque</h3>
 <p class="small">O reboque em utilização é identificado automaticamente.</p>
 
@@ -141,6 +141,7 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <button class="action" id="saveUnhitchEdit">Guardar alterações do desengate</button>
 <button class="cancelButton" id="cancelUnhitchEdit">Cancelar edição</button>
 </div>
+</div>
 
 <details>
 <summary>Histórico de movimentos dos reboques</summary>
@@ -158,7 +159,6 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <details>
 <summary>Mudança de camião</summary>
 <p class="small">Preenche os dados da mudança. O registo é automático quando estiver completo.</p>
-
 <div class="grid">
 <div>
 <label for="truckChangeDate">Data</label>
@@ -169,13 +169,10 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <input type="time" id="truckChangeTime">
 </div>
 </div>
-
 <label for="truckChangePlace">Local</label>
 <input id="truckChangePlace" type="text" placeholder="Local">
-
 <label for="truckChangeTruck">Matrícula do novo camião</label>
 <input id="truckChangeTruck" type="text" placeholder="Matrícula">
-
 <p class="small" id="truckChangeStatus">O registo será feito automaticamente quando preencheres os dados.</p>
 <div id="truckChanges"></div>
 </details>
@@ -193,7 +190,6 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <input type="text" id="endPlace" placeholder="Local">
 </div>
 </div>
-
 <div id="closedStatus" class="small"></div>
 <button class="action" id="closeDay">Fechar dia</button>
 <button class="action secondary hidden" id="reopenDay">Reabrir dia</button>
@@ -213,11 +209,9 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.55}
 <h2>Cópias de segurança</h2>
 <p>Guarda uma cópia dos teus registos ou restaura uma cópia anterior.</p>
 <button class="action" id="exportBtn">Exportar cópia de segurança</button>
-
 <label for="importFile">Escolher cópia para restaurar</label>
 <input type="file" id="importFile" accept=".json,application/json">
 <button class="action secondary" id="importBtn">Restaurar cópia</button>
-
 <p class="small">A restauração substitui os dados existentes neste dispositivo. Exporta primeiro uma cópia dos dados atuais.</p>
 </div>
 </section>
@@ -388,7 +382,6 @@ function renderStart(){
  }
 }
 
-// Só recolhe os campos quando o utilizador sai de toda a área de início.
 $('startFields').addEventListener('focusout',event=>{
  if(event.relatedTarget&&$('startFields').contains(event.relatedTarget))return;
  setTimeout(()=>{
@@ -442,6 +435,20 @@ function renderTrailer(){
 
  const editingHitch=editingHitchId!==null;
  const editingUnhitch=editingUnhitchId!==null;
+
+ // Esconde o formulário de engate enquanto existir reboque ativo.
+ // Continua visível se estivermos a editar um engate anterior.
+ $('hitchSection').classList.toggle(
+  'hidden',
+  active.length!==0&&!editingHitch
+ );
+
+ // Esconde o formulário de desengate quando não existe reboque ativo.
+ // Continua visível durante a edição de um desengate anterior.
+ $('unhitchSection').classList.toggle(
+  'hidden',
+  active.length===0&&!editingUnhitch
+ );
 
  const hitchBlocked=active.length!==0&&!editingHitch;
  const unhitchBlocked=active.length!==1&&!editingUnhitch;
@@ -668,7 +675,6 @@ function renderClosed(){
 
 function updateDayField(id,key){
  const field=$(id);
-
  field.addEventListener('input',()=>{
   getDay()[key]=field.value;
   save();
@@ -752,7 +758,6 @@ function tryHitch(){
  renderClosed();
 }
 
-// Só tenta registar quando o campo é terminado, nunca a cada letra digitada.
 ['newPlate','hitchDate','hitchTime','hitchPlace'].forEach(id=>{
  $(id).addEventListener('change',tryHitch);
 });
