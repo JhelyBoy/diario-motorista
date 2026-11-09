@@ -458,11 +458,20 @@ function renderClosed(){
 }
 
 function updateDayField(id,key){
- $(id).addEventListener('input',()=>{
-  getDay()[key]=$(id).value;
+ const field=$(id);
+
+ field.addEventListener('input',()=>{
+  getDay()[key]=field.value;
   save();
-  if(key==='startTime'||key==='startPlace'||key==='rest')renderStart();
  });
+
+ // Só atualiza/recolhe o resumo quando terminas de editar o campo.
+ // Assim, o campo não desaparece enquanto estás a escrever.
+ if(key==='startTime'||key==='startPlace'||key==='rest'){
+  field.addEventListener('change',()=>{
+   renderStart();
+  });
+ }
 }
 
 $('dayDate').value=currentDate;
